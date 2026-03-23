@@ -1,0 +1,716 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Chick Wars: Global Elite</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&display=swap" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #1b5e20; font-family: 'Fredoka One', cursive; user-select: none; touch-action: none; }
+        
+        /* LOBİ ANİMASYONU */
+        #lobby { position: absolute; width: 100vw; height: 100vh; background: #7cb342; z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; }
+        .feather { position: absolute; background: white; width: 10px; height: 20px; border-radius: 50% 50% 10px 10px; opacity: 0.4; animation: fall linear infinite; }
+        @keyframes fall { 0% { transform: translateY(-100px) rotate(0deg); opacity: 0; } 50% { opacity: 0.6; } 100% { transform: translateY(110vh) rotate(360deg); opacity: 0; } }
+        
+        #lobby h1 { color: #fff; text-shadow: 4px 4px 0 #1b5e20; font-size: clamp(28px, 8vw, 55px); z-index: 1002; margin-bottom: 20px; pointer-events: none; }
+        
+        .profile-card { position: absolute; top: 20px; left: 20px; background: rgba(255, 255, 255, 0.25); backdrop-filter: blur(10px); padding: 10px 18px; border-radius: 15px; border: 3px solid #ffca28; color: white; display: flex; align-items: center; gap: 10px; cursor: pointer; z-index: 1002; }
+
+        .ui-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: none; align-items: center; justify-content: center; }
+        .ui-panel { background: #fff; padding: 25px; border-radius: 25px; border: 5px solid #ffca28; width: 85%; max-width: 360px; text-align: center; }
+        .ui-input { width: 85%; padding: 14px; border-radius: 12px; border: 3px solid #eee; font-family: 'Fredoka One'; font-size: 18px; margin-bottom: 20px; text-align: center; }
+        .ui-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0; }
+        .lang-btn { padding: 10px; background: #546e7a; border: none; color: white; border-radius: 10px; font-family: 'Fredoka One'; cursor: pointer; font-size: 14px; }
+        .ui-btn-confirm { padding: 12px 35px; background: #ff7043; border: none; color: white; border-radius: 12px; font-family: 'Fredoka One'; cursor: pointer; font-size: 16px; box-shadow: 0 5px 0 #e64a19; }
+
+        .battle-buttons { position: absolute; bottom: 40px; right: 40px; display: flex; flex-direction: column; gap: 15px; z-index: 1002; }
+        .war-btn { width: 130px; height: 44px; border: none; color: white; font-family: 'Fredoka One'; font-size: 14px; cursor: pointer; border-radius: 15px; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 0 rgba(0,0,0,0.3); }
+        #settings-btn { background: #455a64; }
+        #offline-btn { background: #ff7043; }
+
+        /* OYUN UI */
+        #game-container { display: none; width: 100%; height: 100%; position: relative; }
+        #leaderboard { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.5); padding: 4px 12px; border-radius: 12px; color: white; font-size: 10px; z-index: 100; text-align: center; border: 1px solid rgba(255,255,255,0.2); white-space: nowrap; }
+        #yem-info { position: absolute; top: 20px; left: 20px; color: #fff; background: rgba(0,0,0,0.7); padding: 10px 20px; border-radius: 25px; z-index: 60; border: 2px solid #ffca28; }
+        
+        .controls-wrapper { position: absolute; bottom: 25px; right: 25px; display: flex; flex-direction: column; gap: 12px; z-index: 200; pointer-events: none; }
+        .controls-wrapper button { pointer-events: auto; }
+        
+        .f-btn { width: 44px; height: 44px; background: #37474f; border: none; color: white; font-size: 18px; border-radius: 12px; box-shadow: 0 4px 0 #102027; cursor: pointer; }
+        .f-btn.active { background: #ffca28; color: #3e2723; box-shadow: 0 4px 0 #f57f17; }
+        .ui-btn { width: 135px; height: 48px; border-radius: 18px; border: none; font-family: 'Fredoka One'; color: white; font-size: 13px; font-weight: bold; cursor: pointer; transition: all 0.1s ease; position: relative; }
+        #spawn-btn-ui { background: #fbc02d; box-shadow: 0 6px 0 #f57f17; color: #3e2723; }
+        #atk-btn-ui { background: #f44336; box-shadow: 0 6px 0 #b71c1c; }
+        
+        #joystick-base { position: absolute; bottom: 70px; left: 70px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; border: 4px solid rgba(255,255,255,0.3); z-index: 200; }
+        #joystick-stick { position: absolute; top: 50%; left: 50%; width: 50px; height: 50px; background: #fff; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    </style>
+</head>
+<body>
+
+    <div id="lobby">
+        <div id="feather-container"></div>
+        <div class="profile-card" onclick="openNameUI()">
+            <span>🐥</span> <span id="display-name">KOMUTAN_TAVUK</span> <span style="color:#ffca28">✎</span>
+        </div>
+        <h1>CHICK WARS</h1>
+        <div class="battle-buttons">
+            <button id="settings-btn" class="war-btn" onclick="openSettingsUI()">⚙️ AYARLAR</button>
+            <button id="offline-btn" class="war-btn" onclick="startGame()">BAŞLAT</button>
+        </div>
+    </div>
+
+    <div id="name-overlay" class="ui-overlay">
+        <div class="ui-panel">
+            <h2 id="name-title">KİMLİK KARTI</h2>
+            <input type="text" id="name-input" class="ui-input" placeholder="..." maxlength="12">
+            <button class="ui-btn-confirm" id="name-ok" onclick="confirmName()">TAMAM</button>
+        </div>
+    </div>
+
+    <div id="settings-overlay" class="ui-overlay">
+        <div class="ui-panel">
+            <h2 id="settings-title">AYARLAR</h2>
+            <div class="ui-grid">
+                <button class="lang-btn" onclick="setLang('tr')">TR</button>
+                <button class="lang-btn" onclick="setLang('en')">EN</button>
+                <button class="lang-btn" onclick="setLang('de')">DE</button>
+                <button class="lang-btn" onclick="setLang('fr')">FR</button>
+                <button class="lang-btn" onclick="setLang('es')">ES</button>
+                <button class="lang-btn" onclick="setLang('it')">IT</button>
+            </div>
+            <button class="ui-btn-confirm" id="settings-close" style="background:#546e7a;" onclick="closeUI()">KAPAT</button>
+        </div>
+    </div>
+
+    <div id="game-container">
+        <div id="leaderboard"></div>
+        <div id="yem-info"><span id="food-label">🌾 BUĞDAY</span>: <span id="food-val">0</span></div>
+        <canvas id="gameCanvas"></canvas>
+        <div class="controls-wrapper">
+            <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button id="f-circle" class="f-btn active" onpointerdown="setFormation('circle', this, event)">◯</button>
+                <button id="f-triangle" class="f-btn" onpointerdown="setFormation('triangle', this, event)">△</button>
+                <button id="f-pentagon" class="f-btn" onpointerdown="setFormation('pentagon', this, event)">⬠</button>
+            </div>
+            <button id="spawn-btn-ui" class="ui-btn" onpointerdown="spawnChick(player, event)">+ ASKER (5)</button>
+            <button id="atk-btn-ui" class="ui-btn" onpointerdown="attackCommand(event)">VUR ⚔️</button>
+        </div>
+        <div id="joystick-base"><div id="joystick-stick"></div></div>
+    </div>
+
+    <script>
+        // ==================== LOBİ TÜYLERİ ====================
+        const featherCount = 15;
+        const container = document.getElementById('feather-container');
+        for(let i=0; i<featherCount; i++) {
+            let f = document.createElement('div'); f.className = 'feather';
+            f.style.left = Math.random()*100 + 'vw';
+            f.style.animationDuration = (Math.random()*5 + 5) + 's';
+            f.style.animationDelay = Math.random()*5 + 's';
+            container.appendChild(f);
+        }
+
+        // ==================== DİL SÖZLÜĞÜ ====================
+        const translations = {
+            tr: { s: "⚙️ AYARLAR", b: "BAŞLAT", v: "VUR ⚔️", a: "+ ASKER (5)", f: "🌾 BUĞDAY", k: "KİMLİK KARTI", t: "TAMAM", c: "KAPAT", st: "AYARLAR" },
+            en: { s: "⚙️ SETTINGS", b: "START", v: "ATTACK ⚔️", a: "+ SOLDIER (5)", f: "🌾 WHEAT", k: "ID CARD", t: "OK", c: "CLOSE", st: "SETTINGS" },
+            de: { s: "⚙️ EINSTELL.", b: "START", v: "ANGRIFF ⚔️", a: "+ KÜKEN (5)", f: "🌾 WEIZEN", k: "AUSWEIS", t: "OK", c: "ZURÜCK", st: "EINSTELLUNGEN" },
+            fr: { s: "⚙️ RÉGLAGES", b: "JOUER", v: "ATTAQUE ⚔️", a: "+ POUSSIN (5)", f: "🌾 BLÉ", k: "CARTE D'ID", t: "OK", c: "FERMER", st: "RÉGLAGES" },
+            es: { s: "⚙️ AJUSTES", b: "JUGAR", v: "ATAQUE ⚔️", a: "+ POLLITO (5)", f: "🌾 TRIGO", k: "TARJETA ID", t: "OK", c: "CERRAR", st: "AJUSTES" },
+            it: { s: "⚙️ OPZIONI", b: "INIZIA", v: "ATTACCO ⚔️", a: "+ PULCINO (5)", f: "🌾 GRANO", k: "ID CARD", t: "OK", c: "CHIUDI", st: "OPZIONI" }
+        };
+
+        // ==================== GLOBAL DEĞİŞKENLER ====================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        let gameActive = false, currentFormation = 'circle', walkCycle = 0;
+        let moveX = 0, moveY = 0;
+        const mapSize = 6000;
+        const CAMERA_ZOOM = 0.65; // Geniş görüş alanı
+        
+        // Oyuncu verisi (can 150)
+        const player = { 
+            x: 3000, y: 3000, hp: 150, maxHp: 150, name: "SEN", score: 0, foodCount: 0,
+            chicks: [], attackCd: 0, spawnCd: 0, lastDamageTime: 0, regenTimer: 0
+        };
+        
+        let foods = [];
+        let enemies = [];
+        let grassPatches = [];
+        
+        // Yardımcı fonksiyonlar
+        function setLang(l) {
+            const t = translations[l];
+            document.getElementById('settings-btn').innerText = t.s;
+            document.getElementById('offline-btn').innerText = t.b;
+            document.getElementById('atk-btn-ui').innerText = t.v;
+            document.getElementById('spawn-btn-ui').innerText = t.a;
+            document.getElementById('food-label').innerText = t.f;
+            document.getElementById('name-title').innerText = t.k;
+            document.getElementById('name-ok').innerText = t.t;
+            document.getElementById('settings-title').innerText = t.st;
+            document.getElementById('settings-close').innerText = t.c;
+            closeUI();
+        }
+
+        function openNameUI() { document.getElementById('name-overlay').style.display = 'flex'; }
+        function openSettingsUI() { document.getElementById('settings-overlay').style.display = 'flex'; }
+        function closeUI() { document.getElementById('name-overlay').style.display = 'none'; document.getElementById('settings-overlay').style.display = 'none'; }
+        function confirmName() {
+            const val = document.getElementById('name-input').value.trim();
+            if(val !== "") { player.name = val.toUpperCase(); document.getElementById('display-name').innerText = player.name; }
+            closeUI();
+        }
+
+        function startGame() { 
+            document.getElementById('lobby').style.display = 'none'; 
+            document.getElementById('game-container').style.display = 'block'; 
+            gameActive = true; 
+            resize(); 
+            init(); 
+            requestAnimationFrame(animate); 
+        }
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.onresize = resize;
+
+        // ==================== OYUN BAŞLATMA ====================
+        function init() {
+            // Yemler azaltıldı
+            for(let i=0; i<400; i++) foods.push({x: Math.random()*mapSize, y: Math.random()*mapSize});
+            // Çimler
+            for(let i=0; i<800; i++) grassPatches.push({x: Math.random()*mapSize, y: Math.random()*mapSize, s: Math.random()*0.5+0.5, r: Math.random()*Math.PI});
+            // Botlar
+            for(let i=0; i<20; i++) spawnEnemy();
+            
+            // Oyuncu başlangıç değerleri: buğday ve civciv yok
+            player.foodCount = 0;
+            player.chicks = [];
+            player.hp = player.maxHp;
+            player.score = 0;
+            player.lastDamageTime = performance.now();
+            player.regenTimer = 0;
+            player.attackCd = 0;
+            player.spawnCd = 0;
+        }
+
+        function spawnEnemy() {
+            let nameList = ["BOT_ALPHA","BOT_BETA","BOT_GAMMA","BOT_DELTA","BOT_OMEGA","BOT_SIGMA"];
+            let randName = nameList[Math.floor(Math.random()*nameList.length)] + Math.floor(Math.random()*99);
+            let newEnemy = { 
+                x: Math.random()*mapSize, y: Math.random()*mapSize, hp: 100, maxHp: 100,
+                color: `hsl(${Math.random()*360}, 65%, 55%)`, name: randName, score: 0, foodCount: 15,
+                chicks: [], attackCd: 0, spawnCd: 0, targetX: Math.random()*mapSize, targetY: Math.random()*mapSize,
+                attackRange: 85, viewRange: 400,
+                chickFormationAngles: []
+            };
+            enemies.push(newEnemy);
+        }
+
+        // ==================== OYUNCU KOMUTLARI ====================
+        function spawnChick(ent, e) {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            if(ent === player && player.spawnCd === 0 && player.foodCount >= 5) {
+                player.foodCount -= 5;
+                player.chicks.push({
+                    x: player.x, y: player.y, hp: 35, damage: 8, attackCd: 0,
+                    state: 'idle', target: null
+                });
+                document.getElementById('food-val').innerText = player.foodCount;
+                player.spawnCd = 600; // 10 saniye
+            }
+        }
+
+        function applyDamageToPlayer(amount) {
+            player.hp = Math.max(0, player.hp - amount);
+            player.lastDamageTime = performance.now();
+            if(player.hp <= 0) gameOver();
+        }
+
+        function attackCommand(e) {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            if(player.attackCd > 0) return;
+            player.attackCd = 30; // 0.5 saniye
+            // Yakın düşmanlara hasar
+            for(let i=0; i<enemies.length; i++) {
+                let en = enemies[i];
+                let dist = Math.hypot(player.x - en.x, player.y - en.y);
+                if(dist < 130) {
+                    en.hp -= 28;
+                    if(en.hp <= 0) {
+                        player.score += 2;
+                        enemies.splice(i,1);
+                        i--;
+                        setTimeout(() => spawnEnemy(), 4000);
+                    }
+                }
+            }
+            // Düşman civcivlerine hasar
+            for(let i=0; i<enemies.length; i++) {
+                for(let j=0; j<enemies[i].chicks.length; j++) {
+                    let chick = enemies[i].chicks[j];
+                    if(Math.hypot(player.x - chick.x, player.y - chick.y) < 130) {
+                        chick.hp -= 20;
+                        if(chick.hp <= 0) enemies[i].chicks.splice(j,1);
+                    }
+                }
+            }
+        }
+
+        function setFormation(f, btn, e) {
+            if(e) { e.preventDefault(); e.stopPropagation(); }
+            currentFormation = f; 
+            document.querySelectorAll('.f-btn').forEach(b => b.classList.remove('active')); 
+            btn.classList.add('active');
+        }
+
+        // ==================== JOYSTICK ====================
+        const base = document.getElementById('joystick-base'), stick = document.getElementById('joystick-stick');
+        let joyId = null;
+        base.addEventListener('pointerdown', e => { joyId = e.pointerId; updateJoy(e); });
+        window.addEventListener('pointermove', e => { if(e.pointerId === joyId) updateJoy(e); });
+        window.addEventListener('pointerup', e => { if(e.pointerId === joyId) { joyId = null; moveX = 0; moveY = 0; stick.style.left='50%'; stick.style.top='50%'; }});
+
+        function updateJoy(e) {
+            const r = base.getBoundingClientRect();
+            let x = e.clientX-(r.left+60), y = e.clientY-(r.top+60), d = Math.sqrt(x*x+y*y);
+            if(d > 50) { x*=50/d; y*=50/d; }
+            stick.style.left = `calc(50% + ${x}px)`; stick.style.top = `calc(50% + ${y}px)`;
+            moveX = x/50; moveY = y/50;
+        }
+
+        // ==================== ÇİZİM FONKSİYONLARI ====================
+        function drawGrass(x, y, scale, rot) {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(rot + Math.sin(Date.now()/500)*0.1);
+            ctx.fillStyle = '#2e7d32';
+            for(let i=0; i<3; i++) {
+                ctx.beginPath(); ctx.moveTo(-5*scale, 0); ctx.quadraticCurveTo(-2*scale, -15*scale, 0, -20*scale);
+                ctx.quadraticCurveTo(2*scale, -15*scale, 5*scale, 0); ctx.fill(); ctx.rotate(0.5);
+            }
+            ctx.restore();
+        }
+
+        function drawUnit(x, y, type, color, hpPercent, name, hpMax=100) {
+            const size = type === 'chick' ? 12 : 26;
+            const b = Math.sin(walkCycle) * 3;
+            ctx.fillStyle = '#e65100'; 
+            let fO = Math.sin(walkCycle * 2) * 7;
+            ctx.fillRect(x-size/2, y+size+fO, 6, 9); ctx.fillRect(x+size/2-6, y+size-fO, 6, 9);
+            if(type !== 'chick') {
+                ctx.fillStyle = '#d32f2f'; ctx.beginPath();
+                ctx.arc(x, y+b-size, 7, 0, 7); ctx.arc(x-5, y+b-size+2, 5, 0, 7); ctx.arc(x+5, y+b-size+2, 5, 0, 7); ctx.fill();
+            }
+            ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y+b, size, 0, 7); ctx.fill();
+            ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(x+size/2, y+b-5, 3, 0, 7); ctx.fill();
+            ctx.fillStyle = '#ff9800'; ctx.beginPath(); ctx.moveTo(x+size-3, y+b); ctx.lineTo(x+size+10, y+b+5); ctx.lineTo(x+size-3, y+b+10); ctx.fill();
+            if(type !== 'chick') {
+                ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x-20, y-size-30, 40, 5);
+                ctx.fillStyle = '#4caf50'; ctx.fillRect(x-20, y-size-30, (hpPercent)*40, 5);
+                ctx.fillStyle = 'white'; ctx.font = '10px Fredoka One'; ctx.fillText(name.substring(0,8), x-20, y-size-35);
+            }
+        }
+
+        // ==================== DÜŞMAN YAPAY ZEKA (COOLDOWN SÜRELERİ OYUNCU İLE AYNI) ====================
+        function updateEnemyChicks(enemy, allEnemies, playerObj) {
+            if(!enemy.chickFormationAngles || enemy.chickFormationAngles.length !== enemy.chicks.length) {
+                enemy.chickFormationAngles = [];
+                for(let i=0; i<enemy.chicks.length; i++) {
+                    enemy.chickFormationAngles.push((i / enemy.chicks.length) * Math.PI * 2);
+                }
+            }
+            
+            for(let i=0; i<enemy.chicks.length; i++) {
+                let chick = enemy.chicks[i];
+                if(chick.attackCd > 0) chick.attackCd--;
+                
+                let target = null;
+                let minD = 100;
+                let dPlayer = Math.hypot(chick.x - playerObj.x, chick.y - playerObj.y);
+                if(dPlayer < minD && playerObj.hp > 0) { target = playerObj; minD = dPlayer; }
+                for(let pc of playerObj.chicks) {
+                    let d = Math.hypot(chick.x - pc.x, chick.y - pc.y);
+                    if(d < minD && pc.hp > 0) { target = pc; minD = d; }
+                }
+                
+                if(target && minD < 45 && chick.attackCd === 0) {
+                    chick.attackCd = 30; // 0.5 sn
+                    if(target === playerObj) {
+                        applyDamageToPlayer(chick.damage);
+                    } else {
+                        target.hp -= chick.damage;
+                        if(target.hp <= 0) {
+                            if(playerObj.chicks.includes(target)) playerObj.chicks = playerObj.chicks.filter(c => c !== target);
+                        }
+                    }
+                }
+                
+                let radius = 55;
+                let angle = enemy.chickFormationAngles[i];
+                angle += 0.02;
+                enemy.chickFormationAngles[i] = angle;
+                let targetX = enemy.x + Math.cos(angle) * radius;
+                let targetY = enemy.y + Math.sin(angle) * radius;
+                
+                if(target && minD < 70) {
+                    let dx = target.x - chick.x;
+                    let dy = target.y - chick.y;
+                    let dist = Math.hypot(dx, dy);
+                    if(dist > 5) {
+                        let speed = Math.min(3.5, dist * 0.25);
+                        chick.x += (dx / dist) * speed;
+                        chick.y += (dy / dist) * speed;
+                    }
+                } else {
+                    let dx = targetX - chick.x;
+                    let dy = targetY - chick.y;
+                    let dist = Math.hypot(dx, dy);
+                    if(dist > 2) {
+                        let speed = Math.min(3.2, dist * 0.3);
+                        chick.x += (dx / dist) * speed;
+                        chick.y += (dy / dist) * speed;
+                    } else {
+                        chick.x = targetX;
+                        chick.y = targetY;
+                    }
+                }
+                
+                chick.x = Math.max(10, Math.min(mapSize-10, chick.x));
+                chick.y = Math.max(10, Math.min(mapSize-10, chick.y));
+            }
+        }
+        
+        function updateAI(enemy, allEnemies, playerObj) {
+            if(enemy.attackCd > 0) enemy.attackCd--;
+            if(enemy.spawnCd > 0) enemy.spawnCd--;
+            
+            // Yem toplama
+            for(let i=0; i<foods.length; i++) {
+                let f = foods[i];
+                if(Math.hypot(enemy.x - f.x, enemy.y - f.y) < 45) {
+                    foods.splice(i,1);
+                    enemy.foodCount += 1;
+                    foods.push({x: Math.random()*mapSize, y: Math.random()*mapSize});
+                    break;
+                }
+            }
+            
+            // Civciv spawn (10 saniye cooldown, 600 frame)
+            if(enemy.foodCount >= 5 && enemy.spawnCd === 0 && enemy.chicks.length < 12) {
+                enemy.foodCount -= 5;
+                let newChick = {x: enemy.x, y: enemy.y, hp: 32, damage: 7, attackCd: 0, owner: 'enemy'};
+                enemy.chicks.push(newChick);
+                enemy.chickFormationAngles = [];
+                for(let i=0; i<enemy.chicks.length; i++) {
+                    enemy.chickFormationAngles.push((i / enemy.chicks.length) * Math.PI * 2);
+                }
+                enemy.spawnCd = 600; // 10 saniye
+            }
+            
+            // Hedef seçimi
+            let closestTarget = null;
+            let closestDist = Infinity;
+            let distToPlayer = Math.hypot(enemy.x - playerObj.x, enemy.y - playerObj.y);
+            if(distToPlayer < enemy.viewRange && playerObj.hp > 0) {
+                closestTarget = playerObj;
+                closestDist = distToPlayer;
+            }
+            for(let other of allEnemies) {
+                if(other === enemy) continue;
+                let d = Math.hypot(enemy.x - other.x, enemy.y - other.y);
+                if(d < enemy.viewRange && d < closestDist && other.hp > 0) {
+                    closestTarget = other;
+                    closestDist = d;
+                }
+            }
+            
+            // Hareket ve saldırı (saldırı cooldown 0.5 sn)
+            if(closestTarget && closestDist < enemy.attackRange) {
+                if(enemy.attackCd === 0) {
+                    enemy.attackCd = 30; // 0.5 sn
+                    if(closestTarget === playerObj) {
+                        applyDamageToPlayer(15);
+                    } else {
+                        closestTarget.hp -= 15;
+                        if(closestTarget.hp <= 0) {
+                            let idx = allEnemies.indexOf(closestTarget);
+                            if(idx !== -1) {
+                                enemy.score += 3;
+                                allEnemies.splice(idx,1);
+                                spawnEnemy();
+                            }
+                        }
+                    }
+                }
+            } 
+            else if(closestTarget) {
+                let angle = Math.atan2(closestTarget.y - enemy.y, closestTarget.x - enemy.x);
+                enemy.x += Math.cos(angle) * 1.2;
+                enemy.y += Math.sin(angle) * 1.2;
+                enemy.targetX = closestTarget.x;
+                enemy.targetY = closestTarget.y;
+            } 
+            else {
+                let nearestFood = null;
+                let nearestFoodDist = 200;
+                for(let f of foods) {
+                    let d = Math.hypot(enemy.x - f.x, enemy.y - f.y);
+                    if(d < nearestFoodDist) {
+                        nearestFoodDist = d;
+                        nearestFood = f;
+                    }
+                }
+                if(nearestFood && nearestFoodDist < 180) {
+                    let angle = Math.atan2(nearestFood.y - enemy.y, nearestFood.x - enemy.x);
+                    enemy.x += Math.cos(angle) * 1.1;
+                    enemy.y += Math.sin(angle) * 1.1;
+                } else {
+                    if(Math.hypot(enemy.x - enemy.targetX, enemy.y - enemy.targetY) < 50) {
+                        enemy.targetX = Math.random()*mapSize;
+                        enemy.targetY = Math.random()*mapSize;
+                    }
+                    let angle = Math.atan2(enemy.targetY - enemy.y, enemy.targetX - enemy.x);
+                    enemy.x += Math.cos(angle) * 0.9;
+                    enemy.y += Math.sin(angle) * 0.9;
+                }
+            }
+            
+            enemy.x = Math.max(30, Math.min(mapSize-30, enemy.x));
+            enemy.y = Math.max(30, Math.min(mapSize-30, enemy.y));
+            
+            updateEnemyChicks(enemy, allEnemies, playerObj);
+        }
+        
+        // ==================== OYUNCU CİVCİVLERİ ====================
+        function updatePlayerChicks() {
+            for(let i=0; i<player.chicks.length; i++) {
+                let chick = player.chicks[i];
+                if(chick.attackCd > 0) chick.attackCd--;
+                
+                let closestEnemy = null;
+                let closestDist = 150;
+                for(let en of enemies) {
+                    let d = Math.hypot(chick.x - en.x, chick.y - en.y);
+                    if(d < closestDist && en.hp > 0) {
+                        closestEnemy = en;
+                        closestDist = d;
+                    }
+                    for(let ec of en.chicks) {
+                        let d2 = Math.hypot(chick.x - ec.x, chick.y - ec.y);
+                        if(d2 < closestDist && ec.hp > 0) {
+                            closestEnemy = ec;
+                            closestDist = d2;
+                        }
+                    }
+                }
+                
+                let tx, ty;
+                let idx = i;
+                let total = player.chicks.length;
+                let angleStep = (idx / total) * Math.PI * 2;
+                if(currentFormation === 'circle') {
+                    tx = player.x + Math.cos(angleStep) * 88;
+                    ty = player.y + Math.sin(angleStep) * 88;
+                } else if(currentFormation === 'triangle') {
+                    let row = Math.floor(Math.sqrt(idx));
+                    let col = idx - row*row;
+                    tx = player.x + (col - row/2) * 45;
+                    ty = player.y + row * 45 - 50;
+                } else {
+                    tx = player.x + Math.cos(angleStep) * 115;
+                    ty = player.y + Math.sin(angleStep) * 115;
+                }
+                
+                if(chick.state === 'idle') {
+                    if(closestEnemy && closestDist < 100) {
+                        chick.state = 'attacking';
+                        chick.target = closestEnemy;
+                    } else {
+                        let dx = tx - chick.x, dy = ty - chick.y;
+                        let dist = Math.hypot(dx, dy);
+                        if(dist > 2) {
+                            let speed = Math.min(6.0, dist * 0.35);
+                            chick.x += (dx / dist) * speed;
+                            chick.y += (dy / dist) * speed;
+                        } else {
+                            chick.x = tx;
+                            chick.y = ty;
+                        }
+                    }
+                } 
+                else if(chick.state === 'attacking') {
+                    if(!chick.target || chick.target.hp <= 0) {
+                        chick.state = 'returning';
+                        chick.target = null;
+                    } else {
+                        let dx = chick.target.x - chick.x;
+                        let dy = chick.target.y - chick.y;
+                        let dist = Math.hypot(dx, dy);
+                        if(dist < 25) {
+                            chick.target.hp -= chick.damage;
+                            chick.attackCd = 20;
+                            if(chick.target.hp <= 0) {
+                                if(enemies.includes(chick.target)) {
+                                    let idx = enemies.indexOf(chick.target);
+                                    if(idx !== -1) {
+                                        player.score += 2;
+                                        enemies.splice(idx,1);
+                                        spawnEnemy();
+                                    }
+                                } else {
+                                    for(let en of enemies) {
+                                        let idx = en.chicks.indexOf(chick.target);
+                                        if(idx !== -1) en.chicks.splice(idx,1);
+                                    }
+                                }
+                            }
+                            chick.state = 'returning';
+                            chick.target = null;
+                        } else {
+                            let speed = Math.min(4.5, dist * 0.25);
+                            chick.x += (dx / dist) * speed;
+                            chick.y += (dy / dist) * speed;
+                        }
+                    }
+                } 
+                else if(chick.state === 'returning') {
+                    let dx = tx - chick.x, dy = ty - chick.y;
+                    let dist = Math.hypot(dx, dy);
+                    if(dist < 12) {
+                        chick.state = 'idle';
+                        chick.x = tx;
+                        chick.y = ty;
+                    } else {
+                        let speed = Math.min(5.5, dist * 0.4);
+                        chick.x += (dx / dist) * speed;
+                        chick.y += (dy / dist) * speed;
+                    }
+                }
+                
+                chick.x = Math.max(15, Math.min(mapSize-15, chick.x));
+                chick.y = Math.max(15, Math.min(mapSize-15, chick.y));
+            }
+        }
+        
+        // ==================== CAN YENİLENMESİ ====================
+        function updateRegeneration(now) {
+            if(player.hp <= 0) return;
+            let timeSinceLastDamage = now - player.lastDamageTime;
+            if(timeSinceLastDamage >= 5000 && player.hp < player.maxHp) {
+                if(player.regenTimer === undefined) player.regenTimer = 0;
+                player.regenTimer += 1/60;
+                if(player.regenTimer >= 1.0) {
+                    player.hp = Math.min(player.maxHp, player.hp + 1);
+                    player.regenTimer = 0;
+                }
+            } else {
+                player.regenTimer = 0;
+            }
+        }
+        
+        // ==================== BUTON COOLDOWN GÖRSELLERİ ====================
+        const attackBtn = document.getElementById('atk-btn-ui');
+        const spawnBtn = document.getElementById('spawn-btn-ui');
+        let attackBtnOriginalText = attackBtn.innerText;
+        let spawnBtnOriginalText = spawnBtn.innerText;
+        
+        function updateCooldownButtons() {
+            if(player.attackCd > 0) {
+                let remaining = player.attackCd / 60;
+                let display = remaining.toFixed(1);
+                attackBtn.style.opacity = '0.5';
+                attackBtn.style.background = '#888';
+                attackBtn.innerText = `${display}s`;
+            } else {
+                attackBtn.style.opacity = '1';
+                attackBtn.style.background = '#f44336';
+                attackBtn.innerText = attackBtnOriginalText;
+            }
+            
+            if(player.spawnCd > 0) {
+                let remaining = player.spawnCd / 60;
+                let display = remaining.toFixed(1);
+                spawnBtn.style.opacity = '0.5';
+                spawnBtn.style.background = '#888';
+                spawnBtn.innerText = `${display}s`;
+            } else {
+                spawnBtn.style.opacity = '1';
+                spawnBtn.style.background = '#fbc02d';
+                spawnBtn.innerText = spawnBtnOriginalText;
+            }
+        }
+        
+        function gameOver() {
+            gameActive = false;
+            alert("Savaş kaybedildi! Tekrar başlatılıyor...");
+            location.reload();
+        }
+
+        // ==================== ANA DÖNGÜ ====================
+        function animate() {
+            if(!gameActive) return;
+            const now = performance.now();
+            walkCycle += (Math.abs(moveX)+Math.abs(moveY)) > 0.1 ? 0.2 : 0.05;
+            if(player.attackCd > 0) player.attackCd--;
+            if(player.spawnCd > 0) player.spawnCd--;
+            updateCooldownButtons();
+            
+            player.x += moveX * 4.0;
+            player.y += moveY * 4.0;
+            player.x = Math.max(50, Math.min(mapSize-50, player.x));
+            player.y = Math.max(50, Math.min(mapSize-50, player.y));
+            
+            for(let i=0; i<foods.length; i++) {
+                let f = foods[i];
+                if(Math.hypot(player.x - f.x, player.y - f.y) < 55) {
+                    foods.splice(i,1);
+                    player.foodCount++;
+                    foods.push({x: Math.random()*mapSize, y: Math.random()*mapSize});
+                    document.getElementById('food-val').innerText = player.foodCount;
+                    break;
+                }
+            }
+            
+            for(let i=0; i<enemies.length; i++) {
+                updateAI(enemies[i], enemies, player);
+            }
+            
+            updatePlayerChicks();
+            updateRegeneration(now);
+            
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            ctx.save();
+            ctx.translate(canvas.width/2, canvas.height/2);
+            ctx.scale(CAMERA_ZOOM, CAMERA_ZOOM);
+            ctx.translate(-player.x, -player.y);
+            
+            ctx.fillStyle = '#4caf50'; ctx.fillRect(0,0,mapSize,mapSize);
+            grassPatches.forEach(g => {
+                if(Math.abs(g.x-player.x)<canvas.width/CAMERA_ZOOM+200 && Math.abs(g.y-player.y)<canvas.height/CAMERA_ZOOM+200) 
+                    drawGrass(g.x, g.y, g.s, g.r);
+            });
+            
+            foods.forEach(f => { ctx.fillStyle = '#fff176'; ctx.beginPath(); ctx.arc(f.x, f.y, 6, 0, 7); ctx.fill(); });
+            
+            enemies.forEach(en => {
+                drawUnit(en.x, en.y, 'enemy', en.color, en.hp/en.maxHp, en.name);
+                en.chicks.forEach(c => drawUnit(c.x, c.y, 'chick', '#d95b2b', 1, '', 100));
+            });
+            
+            player.chicks.forEach(c => drawUnit(c.x, c.y, 'chick', '#ffb74d', 1, '', 100));
+            drawUnit(player.x, player.y, 'player', 'white', player.hp/player.maxHp, player.name);
+            
+            ctx.restore();
+            
+            let topList = [player, ...enemies].sort((a,b) => b.score - a.score).slice(0, 5);
+            let html = "<div>🏆 SKOR</div>";
+            topList.forEach((u,i) => html += `<div>${i+1}. ${u.name.substring(0,8)}: ${u.score}</div>`);
+            document.getElementById('leaderboard').innerHTML = html;
+            document.getElementById('food-val').innerText = player.foodCount;
+            
+            requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
